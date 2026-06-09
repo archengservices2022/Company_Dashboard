@@ -1,22 +1,73 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../config/firebase';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import EmployeeDashboard from '../components/employee/EmployeeDashboard';
-import { LogOut, Building2, Clock } from 'lucide-react';
+import { LogOut, Building2, Clock, Bell, X } from 'lucide-react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 
 export default function Dashboard() {
   const { user, userRole, logout, loading, isCreatingEmployee } = useAuth();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = React.useState('');
   const [displayRole, setDisplayRole] = React.useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationInput, setNotificationInput] = useState('');
 
   React.useEffect(() => {
     if (user && userRole) {
       fetchUserDetails();
+      if (userRole === 'admin') {
+        fetchNotifications();
+      }
     }
   }, [user, userRole]);
+
+  const fetchNotifications = async () => {
+    try {
+      const notifQuery = query(
+        collection(db, 'notifications'),
+        where('companyId', '==', 'default')
+      );
+      const notifSnapshot = await getDocs(notifQuery);
+      const notifList = notifSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })).sort((a, b) => b.createdAt - a.createdAt);
+      setNotifications(notifList);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const addNotification = async () => {
+    if (!notificationInput.trim()) return;
+    try {
+      const { addDoc } = await import('firebase/firestore');
+      await addDoc(collection(db, 'notifications'), {
+        message: notificationInput,
+        createdAt: new Date(),
+        companyId: 'default',
+        type: 'general'
+      });
+      setNotificationInput('');
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Error adding notification:', error);
+    }
+  };
+
+  const deleteNotification = async (notifId) => {
+    try {
+      const { deleteDoc, doc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'notifications', notifId));
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
 
   const fetchUserDetails = async () => {
     try {
@@ -103,7 +154,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="px-3 sm:px-4 lg:px-6 py-4">
           <div className="flex justify-between items-center">
             {/* Left: Company Logo & Title */}
             <div className="flex items-center gap-3">
@@ -125,6 +176,78 @@ export default function Dashboard() {
                 <Clock size={18} />
                 <span className="text-sm font-medium">{currentTime}</span>
               </div>
+
+              {/* Notification Bell - Admin Only */}
+              {userRole === 'admin' && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="relative p-2 hover:bg-gray-100 rounded-lg transition text-gray-700"
+                  >
+                    <Bell size={20} />
+                    {notifications.length > 0 && (
+                      <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                    )}
+                  </button>
+
+                  {/* Notification Dropdown */}
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50">
+                      <div className="p-4 border-b border-gray-200 bg-gray-50">
+                        <h3 className="font-bold text-gray-900">Notifications</h3>
+                      </div>
+
+                      {/* Add Notification */}
+                      <div className="p-4 border-b border-gray-200">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={notificationInput}
+                            onChange={(e) => setNotificationInput(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && addNotification()}
+                            placeholder="Add notification..."
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <button
+                            onClick={addNotification}
+                            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Notifications List */}
+                      <div className="max-h-96 overflow-y-auto">
+                        {notifications.length > 0 ? (
+                          <div className="divide-y divide-gray-200">
+                            {notifications.map((notif) => (
+                              <div key={notif.id} className="p-4 hover:bg-gray-50 transition flex items-start justify-between gap-3">
+                                <div className="flex-1">
+                                  <p className="text-gray-900 text-sm font-medium">{notif.message}</p>
+                                  <p className="text-gray-500 text-xs mt-1">
+                                    {notif.createdAt?.toDate?.().toLocaleString() || 'Just now'}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => deleteNotification(notif.id)}
+                                  className="text-gray-400 hover:text-red-600 transition"
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center">
+                            <p className="text-gray-500 text-sm">No notifications yet</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* User Section */}
               <div className="border-l border-gray-200 pl-6">
@@ -148,7 +271,7 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow">
+      <main className="w-full flex-grow">
         {userRole && userRole.toLowerCase() === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />}
       </main>
 

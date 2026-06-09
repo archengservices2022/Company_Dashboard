@@ -2,18 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../config/firebase';
 import { getDocs, query, where, collection } from 'firebase/firestore';
-import { Briefcase, Calendar, CheckSquare, DollarSign, User, FolderOpen } from 'lucide-react';
+import { Briefcase, Calendar, CheckSquare, DollarSign, User, FolderOpen, Clock } from 'lucide-react';
 import Profile from './Profile';
 import Tasks from './Tasks';
 import Holidays from './Holidays';
 import Attendance from './Attendance';
 import Salary from './Salary';
 import Projects from './Projects';
+import LogHours from './LogHours';
 
 export default function EmployeeDashboard() {
   const [activeTab, setActiveTab] = useState('tasks');
 
   const menuItems = [
+    { id: 'log-hours', label: 'Log Hours', icon: Clock },
     { id: 'tasks', label: 'Tasks', icon: Briefcase },
     { id: 'projects', label: 'Projects', icon: FolderOpen },
     { id: 'attendance', label: 'Attendance', icon: CheckSquare },
@@ -68,6 +70,7 @@ export default function EmployeeDashboard() {
           <div className="flex-1">
             <div className="bg-white rounded-lg shadow-md p-6">
               {activeTab === 'profile' && <Profile />}
+              {activeTab === 'log-hours' && <LogHours />}
               {activeTab === 'tasks' && <Tasks />}
               {activeTab === 'projects' && <Projects />}
               {activeTab === 'attendance' && <Attendance />}

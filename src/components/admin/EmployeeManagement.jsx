@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, Mail, User } from 'lucide-react';
-import { db } from '../../config/firebase';
+import { db, auth } from '../../config/firebase';
 import {
   collection,
   addDoc,
@@ -11,6 +11,7 @@ import {
   query,
   where
 } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 export default function EmployeeManagement() {
   const [employees, setEmployees] = useState([]);
@@ -72,12 +73,21 @@ export default function EmployeeManagement() {
         });
         setSuccessMessage('✅ Employee updated successfully!');
       } else {
-        // Create new employee - Firestore only (no Firebase Auth yet)
+        // Create new employee with Firebase Auth + Firestore
         const defaultPassword = '123456';
 
         try {
-          // Create employee record in Firestore with ALL details
+          // Step 1: Create Firebase Auth user
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            formData.email,
+            defaultPassword
+          );
+          const uid = userCredential.user.uid;
+
+          // Step 2: Create employee record in Firestore
           const docRef = await addDoc(collection(db, 'employees'), {
+            uid: uid,
             name: formData.name,
             email: formData.email,
             phone: formData.phone,
@@ -88,7 +98,6 @@ export default function EmployeeManagement() {
             status: formData.status,
             role: 'employee',
             companyId: 'default',
-            defaultPassword: defaultPassword,
             loginSetup: false,
             createdAt: new Date(),
             updatedAt: new Date()
@@ -110,7 +119,13 @@ export default function EmployeeManagement() {
 
         } catch (createError) {
           console.error('Error creating employee:', createError);
-          setError('Error creating employee: ' + createError.message);
+          if (createError.code === 'auth/email-already-in-use') {
+            setError('❌ Error: Email already registered. Use a different email.');
+          } else if (createError.code === 'auth/weak-password') {
+            setError('❌ Error: Default password too weak. Contact support.');
+          } else {
+            setError('Error creating employee: ' + createError.message);
+          }
         }
       }
 

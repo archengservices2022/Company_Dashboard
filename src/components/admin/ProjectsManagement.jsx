@@ -136,27 +136,35 @@ export default function ProjectsManagement() {
           <h2 className="text-3xl font-bold text-gray-900">Projects Management</h2>
           <p className="text-gray-600 text-sm mt-1">View and manage all company projects</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingId(null);
-            setFormData({
-              name: '',
-              description: '',
-              client: '',
-              assignedTo: '',
-              startDate: '',
-              endDate: '',
-              budget: '',
-              status: 'active',
-              progress: 0
-            });
-            setShowForm(!showForm);
-          }}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition font-semibold shadow-md"
-        >
-          <Plus size={20} />
-          New Project
-        </button>
+        <div className="flex gap-2 items-center">
+          <button
+            className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition shadow-lg"
+            title="Calendar View"
+          >
+            <Calendar size={24} />
+          </button>
+          <button
+            onClick={() => {
+              setEditingId(null);
+              setFormData({
+                name: '',
+                description: '',
+                client: '',
+                assignedTo: '',
+                startDate: '',
+                endDate: '',
+                budget: '',
+                status: 'active',
+                progress: 0
+              });
+              setShowForm(!showForm);
+            }}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition font-semibold shadow-md"
+          >
+            <Plus size={20} />
+            New Project
+          </button>
+        </div>
       </div>
 
       {/* Project Statistics */}
